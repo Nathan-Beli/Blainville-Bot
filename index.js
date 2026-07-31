@@ -2,8 +2,14 @@ require('dotenv').config();
 const { Client, GatewayIntentBits, REST, Routes, ChannelType, PermissionFlagsBits } = require('discord.js');
 const http = require('http');
 
-// 1. Initialisation du client
-const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+// 1. Initialisation du client (avec les intents nécessaires pour lire les messages)
+const client = new Client({ 
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent
+    ] 
+});
 
 // 2. Fonction de conversion de police (Unicode Sans-Serif Bold)
 const convertirTexte = (texte) => {
@@ -14,7 +20,7 @@ const convertirTexte = (texte) => {
     return texte.split('').map(char => map[char] || char).join('');
 };
 
-// 3. Configuration de la commande
+// 3. Configuration de la commande unique
 const commands = [
     {
         name: 'cree-salon',
@@ -28,15 +34,22 @@ const commands = [
     }
 ];
 
-// 4. Enregistrement des commandes
+// 4. Enregistrement des commandes et nettoyage des anciennes
 const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
 (async () => {
     try {
+        console.log('🔄 Nettoyage des anciennes commandes et mise à jour...');
+        
+        // Supprime les anciennes commandes globales
         await rest.put(Routes.applicationCommands(process.env.CLIENT_ID), { body: commands });
-    } catch (error) { console.error(error); }
+        
+        console.log('✅ Commandes actualisées avec succès !');
+    } catch (error) { 
+        console.error(error); 
+    }
 })();
 
-// 5. Logique de création de salon
+// 5. Logique de création de salon et des réactions automatiques
 client.on('interactionCreate', async interaction => {
     if (!interaction.isChatInputCommand()) return;
     if (interaction.commandName === 'cree-salon') {
@@ -58,7 +71,24 @@ client.on('interactionCreate', async interaction => {
     }
 });
 
-// 6. Serveur de santé pour Canner
+// Écouteur pour ajouter les réactions automatiques dans le salon cible
+client.on('messageCreate', async message => {
+    // Ignore les messages envoyés par le bot lui-même pour éviter les boucles
+    if (message.author.bot) return;
+
+    // Vérifie si le message est dans le salon spécifique
+    if (message.channel.id === '1484376441104896274') {
+        try {
+            await message.react('✅');
+            await message.react('🔥');
+            await message.react('⭐');
+        } catch (err) {
+            console.error("Erreur lors de l'ajout des réactions :", err);
+        }
+    }
+});
+
+// 6. Serveur de santé
 http.createServer((req, res) => {
     res.writeHead(200);
     res.end('OK');
